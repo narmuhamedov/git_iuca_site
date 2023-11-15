@@ -1,260 +1,92 @@
-window.requestAnimFrame = () => {
-    return (
-        window.requestAnimationFrame || function (callback) {
-            window.setTimeout(callback);
-        }
-    );
-};
+const car = document.getElementById('car');
+const gameContainer = document.querySelector('.game-container');
+const scoreboard = document.querySelector('.scoreboard');
+let score = 0;
+const scoreElement = document.getElementById('score');
 
-function init(elemId) {
-    let canvas = document.getElementById(elemId),
-        c = canvas.getContext("2d"),
-        w = (canvas.width = window.innerWidth),
-        h = (canvas.height = window.innerHeight);
-    c.fillStyle = "rgba(30,30,30,1)";
-    c.fillRect(0, 0, w, h);
-    return {c: c, canvas: canvas};
+function checkCollision(element1, element2) {
+    const rect1 = element1.getBoundingClientRect();
+    const rect2 = element2.getBoundingClientRect();
+
+    return (
+        rect1.left < rect2.right &&
+        rect1.right > rect2.left &&
+        rect1.top < rect2.bottom &&
+        rect1.bottom > rect2.top
+    );
 }
 
-window.onload = function () {
-    let c = init("canvas").c,
-        canvas = init("canvas").canvas,
-        w = (canvas.width = window.innerWidth),
-        h = (canvas.height = window.innerHeight),
-        mouse = {x: false, y: false},
-        last_mouse = {};
+document.addEventListener('mousemove', (event) => {
+    car.style.left = event.clientX - car.clientWidth / 2 + 'px';
+    car.style.top = event.clientY - car.clientHeight / 2 + 'px';
 
-    function dist(p1x, p1y, p2x, p2y) {
-        return Math.sqrt(Math.pow(p2x - p1x, 2) + Math.pow(p2y - p1y, 2));
+    const coins = document.querySelectorAll('.coin');
+    coins.forEach((coin) => {
+        if (checkCollision(car, coin)) {
+            handleCoinClick(coin);
+        }
+    });
+});
+var get_coin = Number(prompt('Введите колличество коинов для собирания?'))
+
+function handleCoinClick(coin) {
+    score++;
+    scoreElement.textContent = score;
+    coin.style.opacity = '0';
+    coin.remove();
+
+    if (score === get_coin) {
+        showWinModal();
+        resetScore();
     }
+}
 
-    class segment {
-        constructor(parent, l, a, first) {
-            if (first) {
-                this.pos = {
-                    x: parent.x,
-                    y: parent.y
-                };
-            } else {
-                this.pos = {
-                    x: parent.nextPos.x,
-                    y: parent.nextPos.y
-                };
-            }
-            this.l = l;
-            this.ang = a;
-            this.nextPos = {
-                x: this.pos.x + this.l * Math.cos(this.ang),
-                y: this.pos.y + this.l * Math.sin(this.ang)
-            };
-        }
+function showWinModal() {
+    const modal = document.getElementById('myModal');
+    const resetButton = document.getElementById('resetButton');
 
-        update(t) {
-            this.ang = Math.atan2(t.y - this.pos.y, t.x - this.pos.x);
-            this.pos.x = t.x + this.l * Math.cos(this.ang - Math.PI);
-            this.pos.y = t.y + this.l * Math.sin(this.ang - Math.PI);
-            this.nextPos.x = this.pos.x + this.l * Math.cos(this.ang);
-            this.nextPos.y = this.pos.y + this.l * Math.sin(this.ang);
-        }
+    modal.style.display = 'block';
 
-        fallback(t) {
-            this.pos.x = t.x;
-            this.pos.y = t.y;
-            this.nextPos.x = this.pos.x + this.l * Math.cos(this.ang);
-            this.nextPos.y = this.pos.y + this.l * Math.sin(this.ang);
-        }
-
-        show() {
-            c.lineTo(this.nextPos.x, this.nextPos.y);
-        }
-    }
-
-    class tentacle {
-        constructor(x, y, l, n) {
-            this.x = x;
-            this.y = y;
-            this.l = l;
-            this.n = n;
-            this.t = {};
-            this.rand = Math.random();
-            this.segments = [new segment(this, this.l / this.n, 0, true)];
-            for (let i = 1; i < this.n; i++) {
-                this.segments.push(
-                    new segment(this.segments[i - 1], this.l / this.n, 0, false)
-                );
-            }
-        }
-
-        move(last_target, target) {
-            this.angle = Math.atan2(target.y - this.y, target.x - this.x);
-            this.dt = dist(last_target.x, last_target.y, target.x, target.y) + 5;
-            this.t = {
-                x: target.x - 0.8 * this.dt * Math.cos(this.angle),
-                y: target.y - 0.8 * this.dt * Math.sin(this.angle)
-            };
-            if (this.t.x) {
-                this.segments[this.n - 1].update(this.t);
-            } else {
-                this.segments[this.n - 1].update(target);
-            }
-            for (let i = this.n - 2; i >= 0; i--) {
-                this.segments[i].update(this.segments[i + 1].pos);
-            }
-            if (
-                dist(this.x, this.y, target.x, target.y) <=
-                this.l + dist(last_target.x, last_target.y, target.x, target.y)
-            ) {
-                this.segments[0].fallback({x: this.x, y: this.y});
-                for (let i = 1; i < this.n; i++) {
-                    this.segments[i].fallback(this.segments[i - 1].nextPos);
-                }
-            }
-        }
-
-        show(target) {
-            if (dist(this.x, this.y, target.x, target.y) <= this.l) {
-                c.globalCompositeOperation = "lighter";
-                c.beginPath();
-                c.lineTo(this.x, this.y);
-                for (let i = 0; i < this.n; i++) {
-                    this.segments[i].show();
-                }
-                c.strokeStyle =
-                    "hsl(" +
-                    (this.rand * 60 + 180) +
-                    ",100%," +
-                    (this.rand * 60 + 25) +
-                    "%)";
-                c.lineWidth = this.rand * 2;
-                c.lineCap = "round";
-                c.lineJoin = "round";
-                c.stroke();
-                c.globalCompositeOperation = "source-over";
-            }
-        }
-
-        show2(target) {
-            c.beginPath();
-            if (dist(this.x, this.y, target.x, target.y) <= this.l) {
-                c.arc(this.x, this.y, 2 * this.rand + 1, 0, 2 * Math.PI);
-                c.fillStyle = "white";
-            } else {
-                c.arc(this.x, this.y, this.rand * 2, 0, 2 * Math.PI);
-                c.fillStyle = "darkcyan";
-            }
-            c.fill();
-        }
-    }
-
-    let maxL = 300,
-        minL = 50,
-        n = 30,
-        numT = 500,
-        tent = [],
-        clicked = false,
-        target = {x: 0, y: 0},
-        last_target = {},
-        t = 0,
-        q = 10;
-
-    for (let i = 0; i < numT; i++) {
-        tent.push(
-            new tentacle(
-                Math.random() * w,
-                Math.random() * h,
-                Math.random() * (maxL - minL) + minL,
-                n,
-                Math.random() * 2 * Math.PI
-            )
-        );
-    }
-
-    function draw() {
-        if (mouse.x) {
-            target.errx = mouse.x - target.x;
-            target.erry = mouse.y - target.y;
-        } else {
-            target.errx =
-                w / 2 +
-                ((h / 2 - q) * Math.sqrt(2) * Math.cos(t)) /
-                (Math.pow(Math.sin(t), 2) + 1) -
-                target.x;
-            target.erry =
-                h / 2 +
-                ((h / 2 - q) * Math.sqrt(2) * Math.cos(t) * Math.sin(t)) /
-                (Math.pow(Math.sin(t), 2) + 1) -
-                target.y;
-        }
-
-        target.x += target.errx / 10;
-        target.y += target.erry / 10;
-
-        t += 0.01;
-
-        c.beginPath();
-        c.arc(
-            target.x,
-            target.y,
-            dist(last_target.x, last_target.y, target.x, target.y) + 5,
-            0,
-            2 * Math.PI
-        );
-        c.fillStyle = "hsl(210,100%,80%)";
-        c.fill();
-
-        for (let i = 0; i < numT; i++) {
-            tent[i].move(last_target, target);
-            tent[i].show2(target);
-        }
-        for (let i = 0; i < numT; i++) {
-            tent[i].show(target);
-        }
-        last_target.x = target.x;
-        last_target.y = target.y;
-    }
-
-    canvas.addEventListener("mousemove", function (e) {
-            last_mouse.x = mouse.x;
-            last_mouse.y = mouse.y;
-
-            mouse.x = e.pageX - this.offsetLeft;
-            mouse.y = e.pageY - this.offsetTop;
-        }, false
-    );
-
-    canvas.onmouseleave = () => {
-        mouse.x = false;
-        mouse.y = false;
-    }
-
-    canvas.addEventListener(
-        "mousedown",
-        function () {
-            clicked = true;
-        },
-        false
-    );
-
-    canvas.addEventListener(
-        "mouseup",
-        function () {
-            clicked = false;
-        },
-        false
-    );
-
-    function loop() {
-        window.requestAnimFrame(loop);
-        c.clearRect(0, 0, w, h);
-        draw();
-    }
-
-    window.addEventListener("resize", function () {
-        (w = canvas.width = window.innerWidth);
-        (h = canvas.height = window.innerHeight);
-        loop();
+    resetButton.addEventListener('click', () => {
+      modal.style.display = 'none';
     });
 
-    loop();
-    setInterval(loop, 1000 / 60);
-};
+    window.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+
+  function resetScore() {
+    score = 0;
+    scoreElement.textContent = score;
+  }
+
+function createCoin() {
+    const coin = document.createElement('div');
+    coin.className = 'coin';
+
+    const maxX = gameContainer.clientWidth - 30;
+    const maxY = gameContainer.clientHeight - 30;
+    const randomX = Math.random() * maxX;
+    const randomY = Math.random() * maxY;
+
+    coin.style.left = randomX + 'px';
+    coin.style.top = randomY + 'px';
+    gameContainer.appendChild(coin);
+
+    coin.addEventListener('click', () => {
+        handleCoinClick(coin);
+    });
+
+    coin.style.transition = 'opacity 0.3s';
+    coin.style.opacity = '1';
+
+    setTimeout(() => {
+        coin.remove();
+        createCoin();
+    }, 3000);
+}
+
+createCoin();

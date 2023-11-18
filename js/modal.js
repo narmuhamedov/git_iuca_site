@@ -21,3 +21,28 @@ modal.onclick = (event)=>{
         closeModal()
     }
 }
+
+
+
+let modalShown = false;
+
+window.addEventListener('scroll', function showModalOnScroll() {
+    const scrolledToBottom =
+        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight;
+
+    if (scrolledToBottom && !modalShown) {
+        openModal();
+        modalShown = true;
+        window.removeEventListener('scroll', showModalOnScroll);
+    }
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        if (!modalShown) {
+            openModal();
+            modalShown = true;
+        }
+    }, 10000); // 10 seconds in milliseconds
+});
+

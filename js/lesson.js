@@ -51,5 +51,32 @@ tabsItemsParents.onclick = (event)=>{
     }
 }
 
+let currentIndex = 0; // первая вкладка
+let intervalId; // Переменная для хранения иинтервала
 
+// Функция для автоматического переключения
+const startAutoSlider = () => {
+    intervalId = setInterval(() => {
+        hightTabsContentCards();
+        showTabsContentCards(currentIndex);
+        currentIndex = (currentIndex + 1) % tabsItems.length; // Переключение на следующую вкладку
+    }, 3000); // Интервал - каждые 3 секунды
+};
 
+// Запуск автослайда
+startAutoSlider();
+
+// Остановка автослайда при клике на вкладку
+tabsItemsParents.onclick = (event) => {
+    clearInterval(intervalId); // Остановка интервала при клике на вкладку
+    if (event.target.classList.contains('tab_content_item')) {
+        tabsItems.forEach((tabItem, tabItemIndex) => {
+            if (event.target === tabItem) {
+                hightTabsContentCards();
+                showTabsContentCards(tabItemIndex);
+                currentIndex = tabItemIndex; // Обновляем текущий индекс
+                startAutoSlider(); // После клика запускаем автоматический слайдер снова
+            }
+        });
+    }
+};

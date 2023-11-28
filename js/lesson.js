@@ -100,23 +100,23 @@ const converter = (element, targetElement, type) => {
                 case 'som':
                     targetElement.value = (element.value / data.usd).toFixed(2)
                     eurInput.value = (element.value / data.eur).toFixed(2)
-                      if (element.value === '') {
+                    if (element.value === '') {
                         usdInput.value = ''
                         eurInput.value = ''
                     }
                     break
                 case 'usd':
                     targetElement.value = (element.value * data.usd).toFixed(2)
-                    eurInput.value = (element.value * data.usd/data.eur).toFixed(2)
-                     if (element.value === '') {
+                    eurInput.value = (element.value * data.usd / data.eur).toFixed(2)
+                    if (element.value === '') {
                         somInput.value = ''
                         eurInput.value = ''
                     }
                     break
                 case 'eur':
                     targetElement.value = (element.value * data.eur).toFixed(2)
-                    usdInput.value = (element.value * data.eur/data.usd).toFixed(2)
-                        if (element.value === '') {
+                    usdInput.value = (element.value * data.eur / data.usd).toFixed(2)
+                    if (element.value === '') {
                         somInput.value = ''
                         usdInput.value = ''
                     }
@@ -168,3 +168,55 @@ converter(eurInput, somInput, 'eur')
 // })
 
 //DRY
+
+//
+const card = document.querySelector('.card');
+const btnPrev = document.querySelector('#btn-prev');
+const btnNext = document.querySelector('#btn-next');
+
+let count = 1;
+const totalCards = 200;
+
+// Функция для получения данных о карточке
+function getCardData(cardNumber) {
+    return fetch(`https://jsonplaceholder.typicode.com/todos/${cardNumber}`)
+        .then(response => response.json());
+}
+
+// Функция обновления карточки с данными
+function updateCard(cardData) {
+    card.innerHTML = `
+        <p>${cardData.title}</p>
+        <p style="color: ${cardData.completed ? 'green' : 'yellow'}">${cardData.completed}</p>
+        <span>${cardData.id}</span>
+    `;
+}
+
+// Функция обработки кнопки Prev
+function showPrevCard() {
+    count = (count === 1) ? totalCards : count - 1;
+    getCardData(count)
+        .then(data => updateCard(data));
+}
+
+// Функция обработки кнопки Next
+function showNextCard() {
+    count = (count === totalCards) ? 1 : count + 1;
+    getCardData(count)
+        .then(data => updateCard(data));
+}
+
+// Показать первую карточку при загрузке страницы
+getCardData(count)
+    .then(data => updateCard(data));
+
+// Обработчики событий для кнопок prev и next
+btnPrev.addEventListener('click', showPrevCard);
+btnNext.addEventListener('click', showNextCard);
+
+
+//HomeWork 6.2
+fetch('https://jsonplaceholder.typicode.com/posts')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Ошибка при запросе:', error));

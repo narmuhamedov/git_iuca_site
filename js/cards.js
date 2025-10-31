@@ -15,6 +15,7 @@ async function getPosts() {
     }
 }
 
+//
 async function renderCards() {
     const posts = await getPosts();
     cardsContainer.innerHTML = '';
